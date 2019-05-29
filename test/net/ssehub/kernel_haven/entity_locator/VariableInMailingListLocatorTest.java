@@ -15,19 +15,20 @@
  */
 package net.ssehub.kernel_haven.entity_locator;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-import org.junit.runners.Suite.SuiteClasses;
+import org.junit.Test;
 
 /**
- * All tests for this plug-in.
+ * Tests the {@link VariableInMailingListLocator}.
  *
  * @author Adam
  */
-@RunWith(Suite.class)
-@SuiteClasses({
-    VariableInMailingListLocatorTest.class,
-    })
-public class AllTests {
+public class VariableInMailingListLocatorTest {
 
+    /**
+     * TODO: empty test.
+     */
+    @Test
+    public void todo() {
+    }
+    
 }
