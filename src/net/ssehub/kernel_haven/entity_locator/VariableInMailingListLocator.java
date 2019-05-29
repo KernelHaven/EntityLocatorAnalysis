@@ -15,9 +15,25 @@
  */
 package net.ssehub.kernel_haven.entity_locator;
 
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import net.ssehub.kernel_haven.SetUpException;
 import net.ssehub.kernel_haven.analysis.AnalysisComponent;
 import net.ssehub.kernel_haven.config.Configuration;
 import net.ssehub.kernel_haven.entity_locator.VariableInMailingListLocator.VariableMailLocation;
+import net.ssehub.kernel_haven.entity_locator.util.GitException;
+import net.ssehub.kernel_haven.entity_locator.util.GitRepository;
+import net.ssehub.kernel_haven.util.ProgressLogger;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;;
 
 /**
@@ -68,18 +84,101 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         
     }
     
+    private static final @NonNull Pattern VAR_REGEX = notNull(Pattern.compile("CONFIG_\\w+")); // TODO
+    
+    private static final @NonNull String LORE_URL = "https://lore.kernel.org/lkml/"; // TODO
+    
+    private static final @NonNull File GIT_CHECKOUT = new File("E:\\tmp\\lkml\\test"); // TODO
+    
+    private @NonNull GitRepository gitRepo;
+    
     /**
      * Creates this component.
      * 
      * @param config The pipeline configuration.
+     * 
+     * @throws SetUpException If setting up this component fails.
      */
-    public VariableInMailingListLocator(@NonNull Configuration config) {
+    public VariableInMailingListLocator(@NonNull Configuration config) throws SetUpException {
         super(config);
+        
+        try {
+            this.gitRepo = new GitRepository(GIT_CHECKOUT);
+        } catch (GitException e) {
+            throw new SetUpException("Couldn't open git repository", e);
+        }
     }
 
     @Override
     protected void execute() {
-        // TODO: implement
+        List<String> commits;
+        try {
+            gitRepo.checkout("master");
+            commits = gitRepo.listAllCommits();
+        } catch (GitException e) {
+            LOGGER.logException("Couldn't initialize git repository", e);
+            return;
+        }
+        
+        ProgressLogger progress = new ProgressLogger("Parsing Mails", commits.size());
+        for (String commit : commits) {
+            try {
+                gitRepo.checkout(commit);
+            } catch (GitException e) {
+                LOGGER.logException("Couldn't check out commit: " + commit, e);
+            }
+
+            try (BufferedReader in = new BufferedReader(new FileReader(new File(gitRepo.getWorkingDirectory(), "m")))) {
+                
+                String messageId = null;
+                String line;
+                while ((line = in.readLine()) != null) {
+                    String header = line.toLowerCase();
+                    if (header.startsWith("message-id:")) {
+                        messageId = line.substring("message-id:".length()).trim();
+                        if (messageId.charAt(0) == '<' && messageId.charAt(messageId.length() - 1) == '>') {
+                            messageId = messageId.substring(1, messageId.length() - 1);
+                        }
+                        break;
+                    }
+                    
+                    // only parse the header of the mail
+                    if (line.isEmpty()) {
+                        break;
+                    }
+                }
+                
+                if (messageId == null) {
+                    System.err.println("Couldn't find message ID...");
+                    progress.processedOne();
+                    continue;
+                }
+                
+                // read the rest of the mail and search for variables
+                Set<String> foundVars = new HashSet<>();
+                while ((line = in.readLine()) != null) {
+                    Matcher m = VAR_REGEX.matcher(line);
+                    if (m.find()) {
+                        foundVars.add(m.group());
+                    }
+                }
+                
+                if (!foundVars.isEmpty()) {
+                    String mailId = LORE_URL + messageId + "/";
+                    for (String var : foundVars) {
+                        addResult(new VariableMailLocation(var, mailId));
+                    }
+                }
+                
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            
+            
+            progress.processedOne();
+        }
+        
+        progress.close();
     }
 
     @Override
