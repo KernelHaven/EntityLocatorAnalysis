@@ -34,6 +34,7 @@ import net.ssehub.kernel_haven.entity_locator.VariableInMailingListLocator.Varia
 import net.ssehub.kernel_haven.entity_locator.util.GitException;
 import net.ssehub.kernel_haven.entity_locator.util.GitRepository;
 import net.ssehub.kernel_haven.util.ProgressLogger;
+import net.ssehub.kernel_haven.util.Util;
 import net.ssehub.kernel_haven.util.io.TableElement;
 import net.ssehub.kernel_haven.util.io.TableRow;
 import net.ssehub.kernel_haven.util.null_checks.NonNull;
@@ -210,7 +211,7 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
             return;
         }
         
-        ProgressLogger progress = new ProgressLogger("Parsing Mails", commits.size());
+        ProgressLogger progress = new ProgressLogger("Parsing mail", commits.size());
         for (String commit : commits) {
             try {
                 gitRepo.checkout(commit);
@@ -237,31 +238,34 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         ProgressLogger progress = new ProgressLogger("Crawling mail sources", this.mailSources.size());
         
         for (String mailSource : this.mailSources) {
-            GitRepository gitRepo = null;
-            
             File dir = new File(mailSource);
             if (dir.isDirectory()) {
                 // mailSource is a locally checked-out git repository
                 try {
-                    gitRepo = new GitRepository(dir);
+                    execute(new GitRepository(dir));
                 } catch (GitException e) {
                     LOGGER.logException(mailSource + " is not a valid git repository", e);
                 }
             } else {
                 // mailSource is a remote URL
+                File dest = null;
                 try {
-                    File dest = File.createTempFile("cloned_mail_source", ".git");
+                    dest = File.createTempFile("cloned_mail_source", ".git");
                     dest.delete();
                     
-                    gitRepo = GitRepository.clone(mailSource, dest);
+                    execute(GitRepository.clone(mailSource, dest));
                     
                 } catch (IOException | GitException e) {
                     LOGGER.logException("Could not clone " + mailSource, e);
+                } finally {
+                    if (dest != null) {
+                        try {
+                            Util.deleteFolder(dest);
+                        } catch (IOException e) {
+                            LOGGER.logException("Couldn't clear temporary checkout", e);
+                        }
+                    }
                 }
-            }
-            
-            if (gitRepo != null) {
-                execute(gitRepo);
             }
             
             progress.processedOne();

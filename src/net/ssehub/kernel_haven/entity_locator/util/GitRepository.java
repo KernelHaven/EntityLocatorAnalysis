@@ -25,6 +25,7 @@ import java.util.Set;
 
 import net.ssehub.kernel_haven.util.Logger;
 import net.ssehub.kernel_haven.util.Util;
+import net.ssehub.kernel_haven.util.null_checks.NonNull;
 
 /**
  * Represents a local git repository directory.
@@ -71,7 +72,7 @@ public class GitRepository {
      * 
      * @throws GitException If cloning fails.
      */
-    public static GitRepository clone(String remoteUrl, File destination) throws GitException {
+    public static @NonNull GitRepository clone(String remoteUrl, File destination) throws GitException {
         if (destination.exists()) {
             throw new GitException(destination + " already exists");
         }
