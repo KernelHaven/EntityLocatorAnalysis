@@ -1,3 +1,18 @@
+/*
+ * Copyright 2019 University of Hildesheim, Software Systems Engineering
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package net.ssehub.kernel_haven.entity_locator.util;
 
 import java.io.ByteArrayOutputStream;
@@ -43,6 +58,42 @@ public class GitRepository {
         
         if (!new File(workingDirectory, ".git").isDirectory()) {
             init();
+        }
+    }
+    
+    /**
+     * Clones a given remote repository to a local destination.
+     * 
+     * @param remoteUrl The remote URL to clone.
+     * @param destination The destination to clone to. This must not yet exist.
+     * 
+     * @return A {@link GitRepository} for the given cloned destination.
+     * 
+     * @throws GitException If cloning fails.
+     */
+    public static GitRepository clone(String remoteUrl, File destination) throws GitException {
+        if (destination.exists()) {
+            throw new GitException(destination + " already exists");
+        }
+        
+        destination.mkdir();
+        if (!destination.isDirectory()) {
+            throw new GitException("Couldn't create destination directory: " + destination);
+        }
+        
+        try {
+            runGitCommand(destination, "git", "clone", remoteUrl, destination.getAbsolutePath());
+            
+            return new GitRepository(destination);
+        } catch (GitException e) {
+            // clean up failed clone destination
+            try {
+                Util.deleteFolder(destination);
+            } catch (IOException e1) {
+                // ignore
+            }
+            
+            throw e;
         }
     }
     
@@ -267,7 +318,7 @@ public class GitRepository {
     }
     
     /**
-     * Runs the given git command.
+     * Runs the given git command in this git repository.
      * 
      * @param command The command to run, with command line parameters.
      * 
@@ -276,6 +327,20 @@ public class GitRepository {
      * @throws GitException If the given command fails executing or returns non-success.
      */
     private String runGitCommand(String... command) throws GitException {
+        return runGitCommand(workingDirectory, command);
+    }
+    
+    /**
+     * Runs the given git command.
+     * 
+     * @param workingDirectory The working directory to execute the command in.
+     * @param command The command to run, with command line parameters.
+     * 
+     * @return The standard output stream content.
+     * 
+     * @throws GitException If the given command fails executing or returns non-success.
+     */
+    private static String runGitCommand(File workingDirectory, String... command) throws GitException {
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(workingDirectory);
         
@@ -315,7 +380,7 @@ public class GitRepository {
      * @param message The message to log.
      * @param limit The maximum number of lines.
      */
-    private void logWithLimit(String header, String message, int limit) {
+    private static void logWithLimit(String header, String message, int limit) {
         if (message.chars().filter((ch) -> ch == '\n').count() > limit) {
             LOGGER.logDebug(header, "<too long>");
         } else {

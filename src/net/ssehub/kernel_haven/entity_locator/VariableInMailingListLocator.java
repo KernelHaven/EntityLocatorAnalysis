@@ -15,26 +15,28 @@
  */
 package net.ssehub.kernel_haven.entity_locator;
 
-import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.ssehub.kernel_haven.SetUpException;
 import net.ssehub.kernel_haven.analysis.AnalysisComponent;
 import net.ssehub.kernel_haven.config.Configuration;
+import net.ssehub.kernel_haven.config.Setting;
+import net.ssehub.kernel_haven.config.Setting.Type;
 import net.ssehub.kernel_haven.entity_locator.VariableInMailingListLocator.VariableMailLocation;
 import net.ssehub.kernel_haven.entity_locator.util.GitException;
 import net.ssehub.kernel_haven.entity_locator.util.GitRepository;
 import net.ssehub.kernel_haven.util.ProgressLogger;
-import net.ssehub.kernel_haven.util.null_checks.NonNull;;
+import net.ssehub.kernel_haven.util.io.TableElement;
+import net.ssehub.kernel_haven.util.io.TableRow;
+import net.ssehub.kernel_haven.util.null_checks.NonNull;
 
 /**
  * A component that locates variables in external mailings lists (like the Linux Kernel Mailing List).
@@ -46,21 +48,26 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
     /**
      * Represents a variable that was found in a mail from a mailing list.
      */
+    @TableRow
     public static class VariableMailLocation {
 
         private String variable;
         
         private String mailIdentifier;
+        
+        private int numOccurrences;
 
         /**
          * Creates a variable-mail mapping.
          * 
          * @param variable The variable that was found.
          * @param mailIdentifier An identifier for the mail that was found (usually an URL to a web-interface).
+         * @param numOccurrences The number of occurrences of this variable in the mail.
          */
-        public VariableMailLocation(String variable, String mailIdentifier) {
+        public VariableMailLocation(String variable, String mailIdentifier, int numOccurrences) {
             this.variable = variable;
             this.mailIdentifier = mailIdentifier;
+            this.numOccurrences = numOccurrences;
         }
         
         /**
@@ -68,6 +75,7 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
          * 
          * @return The variable that was found.
          */
+        @TableElement(index = 0, name = "Variable")
         public String getVariable() {
             return variable;
         }
@@ -78,19 +86,43 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
          * 
          * @return The identifier for the mail.
          */
+        @TableElement(index = 1, name = "Mail")
         public String getMailIdentifier() {
             return mailIdentifier;
         }
         
+        /**
+         * Returns the number of occurrences of this variable in the mail.
+         * 
+         * @return The identifier for the mail.
+         */
+        @TableElement(index = 2, name = "Occurrences")
+        public int getNumOccurrences() {
+            return numOccurrences;
+        }
+        
     }
     
-    private static final @NonNull Pattern VAR_REGEX = notNull(Pattern.compile("CONFIG_\\w+")); // TODO
+    public static final @NonNull Setting<@NonNull List<@NonNull String>> MAIL_SOURCES = new Setting<>(
+        "analysis.mail_locator.mail_sources", Type.STRING_LIST, true, null, "List of Git repositories that contain "
+                + "the mails to be searched. These may be remote URLs or local directories. In the first case, the "
+                + "remote will be cloned into a temporary directory. In the second case, the master branch of the "
+                + "existing checkout will be used directly.");
     
-    private static final @NonNull String LORE_URL = "https://lore.kernel.org/lkml/"; // TODO
+    public static final @NonNull Setting<@NonNull Pattern> VAR_REGEX = new Setting<>(
+        "analysis.mail_locator.variable_regex", Type.REGEX, true, null, "Specifies the regular expression used to find "
+                + "relevant variables.");
     
-    private static final @NonNull File GIT_CHECKOUT = new File("E:\\tmp\\lkml\\test"); // TODO
+    public static final @NonNull Setting<@NonNull String> URL_PREFIX = new Setting<>(
+            "analysis.mail_locator.url_prefix", Type.STRING, true, null, "Specifies an URL prefix for the mails. The "
+                    + "message-id of the mail will be appended to this string (with slashes replaced by %2F) to "
+                    + "create the identifier of the mail.");
     
-    private @NonNull GitRepository gitRepo;
+    private @NonNull List<@NonNull String> mailSources;
+    
+    private @NonNull Pattern varRegex;
+    
+    private @NonNull String urlPrefix;
     
     /**
      * Creates this component.
@@ -102,15 +134,72 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
     public VariableInMailingListLocator(@NonNull Configuration config) throws SetUpException {
         super(config);
         
-        try {
-            this.gitRepo = new GitRepository(GIT_CHECKOUT);
-        } catch (GitException e) {
-            throw new SetUpException("Couldn't open git repository", e);
+        config.registerSetting(MAIL_SOURCES);
+        this.mailSources = config.getValue(MAIL_SOURCES);
+        if (mailSources.isEmpty()) {
+            throw new SetUpException("No mail source given in " + MAIL_SOURCES.getKey());
         }
+        
+        config.registerSetting(VAR_REGEX);
+        this.varRegex = config.getValue(VAR_REGEX);
+        
+        config.registerSetting(URL_PREFIX);
+        this.urlPrefix = config.getValue(URL_PREFIX);
     }
 
-    @Override
-    protected void execute() {
+    /**
+     * Searches the given mail for any relevant variables.
+     * 
+     * @param in The mail to read.
+     * 
+     * @throws IOException If reading the mail fails.
+     */
+    private void searchInMail(@NonNull BufferedReader in) throws IOException {
+        String messageId = null;
+        String line;
+        while ((line = in.readLine()) != null) {
+            String header = line.toLowerCase();
+            if (header.startsWith("message-id:")) {
+                messageId = line.substring("message-id:".length()).trim();
+                if (messageId.charAt(0) == '<' && messageId.charAt(messageId.length() - 1) == '>') {
+                    messageId = messageId.substring(1, messageId.length() - 1);
+                }
+            }
+            
+            // only parse the header of the mail
+            if (line.isEmpty()) {
+                break;
+            }
+        }
+        
+        if (messageId == null) {
+            // couldn't find any message id...
+            return;
+        }
+        
+        // read the rest of the mail and search for variables
+        Map<String, Integer> foundVars = new HashMap<>();
+        while ((line = in.readLine()) != null) {
+            Matcher m = varRegex.matcher(line);
+            while (m.find()) {
+                foundVars.put(m.group(), foundVars.getOrDefault(m.group(), 0) + 1);
+            }
+        }
+        
+        if (!foundVars.isEmpty()) {
+            String mailId = urlPrefix + messageId.replace("/", "%2F");
+            for (Map.Entry<String, Integer> entry : foundVars.entrySet()) {
+                addResult(new VariableMailLocation(entry.getKey(), mailId, entry.getValue()));
+            }
+        }
+    }
+    
+    /**
+     * Executes this analysis on the given git repository.
+     * 
+     * @param gitRepo The git repository containing the already checked-out mail archive.
+     */
+    private void execute(@NonNull GitRepository gitRepo) {
         List<String> commits;
         try {
             gitRepo.checkout("master");
@@ -130,55 +219,48 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
 
             try (BufferedReader in = new BufferedReader(new FileReader(new File(gitRepo.getWorkingDirectory(), "m")))) {
                 
-                String messageId = null;
-                String line;
-                while ((line = in.readLine()) != null) {
-                    String header = line.toLowerCase();
-                    if (header.startsWith("message-id:")) {
-                        messageId = line.substring("message-id:".length()).trim();
-                        if (messageId.charAt(0) == '<' && messageId.charAt(messageId.length() - 1) == '>') {
-                            messageId = messageId.substring(1, messageId.length() - 1);
-                        }
-                        break;
-                    }
-                    
-                    // only parse the header of the mail
-                    if (line.isEmpty()) {
-                        break;
-                    }
-                }
-                
-                if (messageId == null) {
-                    System.err.println("Couldn't find message ID...");
-                    progress.processedOne();
-                    continue;
-                }
-                
-                // read the rest of the mail and search for variables
-                Set<String> foundVars = new HashSet<>();
-                while ((line = in.readLine()) != null) {
-                    Matcher m = VAR_REGEX.matcher(line);
-                    if (m.find()) {
-                        foundVars.add(m.group());
-                    }
-                }
-                
-                if (!foundVars.isEmpty()) {
-                    String mailId = LORE_URL + messageId + "/";
-                    for (String var : foundVars) {
-                        addResult(new VariableMailLocation(var, mailId));
-                    }
-                }
+                searchInMail(in);
                 
             } catch (IOException e) {
-                e.printStackTrace();
+                LOGGER.logException("Couldn't read mail", e);
             }
-            
             
             progress.processedOne();
         }
         
         progress.close();
+    }
+    
+    @Override
+    protected void execute() {
+        for (String mailSource : this.mailSources) {
+            GitRepository gitRepo = null;
+            
+            File dir = new File(mailSource);
+            if (dir.isDirectory()) {
+                // mailSource is a locally checked-out git repository
+                try {
+                    gitRepo = new GitRepository(dir);
+                } catch (GitException e) {
+                    LOGGER.logException(mailSource + " is not a valid git repository", e);
+                }
+            } else {
+                // mailSource is a remote URL
+                try {
+                    File dest = File.createTempFile("cloned_mail_source", ".git");
+                    dest.delete();
+                    
+                    gitRepo = GitRepository.clone(mailSource, dest);
+                    
+                } catch (IOException | GitException e) {
+                    LOGGER.logException("Could not clone " + mailSource, e);
+                }
+            }
+            
+            if (gitRepo != null) {
+                execute(gitRepo);
+            }
+        }
     }
 
     @Override
