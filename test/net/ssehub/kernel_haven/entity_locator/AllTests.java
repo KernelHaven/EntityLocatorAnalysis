@@ -26,6 +26,7 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(Suite.class)
 @SuiteClasses({
+    GitRepositoryTest.class,
     VariableInMailingListLocatorTest.class,
     })
 public class AllTests {
