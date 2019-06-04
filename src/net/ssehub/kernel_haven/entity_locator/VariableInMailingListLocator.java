@@ -233,6 +233,8 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
     
     @Override
     protected void execute() {
+        ProgressLogger progress = new ProgressLogger("Crawling mail sources", this.mailSources.size());
+        
         for (String mailSource : this.mailSources) {
             GitRepository gitRepo = null;
             
@@ -260,7 +262,11 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
             if (gitRepo != null) {
                 execute(gitRepo);
             }
+            
+            progress.processedOne();
         }
+        
+        progress.close();
     }
 
     @Override
