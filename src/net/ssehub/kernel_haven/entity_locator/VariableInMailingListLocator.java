@@ -161,7 +161,8 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
             String header = line.toLowerCase();
             if (header.startsWith("message-id:")) {
                 messageId = line.substring("message-id:".length()).trim();
-                if (messageId.charAt(0) == '<' && messageId.charAt(messageId.length() - 1) == '>') {
+                if (!messageId.isEmpty()
+                        && messageId.charAt(0) == '<' && messageId.charAt(messageId.length() - 1) == '>') {
                     messageId = messageId.substring(1, messageId.length() - 1);
                 }
             }
