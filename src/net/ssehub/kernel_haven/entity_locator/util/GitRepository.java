@@ -223,6 +223,19 @@ public class GitRepository {
     }
     
     /**
+     * Checks out a given version of a single file only.
+     * 
+     * @param commitHash The commit hash to check out.
+     * @param file The file to check out at the specified commit. Must be relative to the
+     *      {@link #getWorkingDirectory()}.
+     * 
+     * @throws GitException If this command fails.
+     */
+    public void checkout(String commitHash, File file) throws GitException {
+        runGitCommand("git", "checkout", "--force", commitHash, "--", file.getPath());
+    }
+    
+    /**
      * Creates a list of all commit hashes in the current branch (to be more precise: all commits reachable by the
      * current HEAD). The result order is based on the author date, sorted old to new.
      * 

@@ -331,6 +331,74 @@ public class GitRepositoryTest {
     }
     
     /**
+     * Tests the {@link GitRepository#checkout(String, File)} method.
+     * 
+     * @throws GitException unwanted.
+     * @throws IOException unwanted.
+     */
+    @Test
+    public void testCheckoutFile() throws GitException, IOException {
+        // clone the testRepo, so that we don't modify the original
+        File clonedRepo = new File(TESTDATA, "clonedRepo");
+        assertThat(clonedRepo.exists(), is(false));
+        
+        try {
+            File m = new File(clonedRepo, "m");
+            
+            GitRepository repo = GitRepository.clone("file://" + TEST_REPO.getAbsolutePath(), clonedRepo);
+            assertThat(repo.getWorkingDirectory(), is(clonedRepo));
+            assertThat(clonedRepo.isDirectory(), is(true));
+            assertThat(new File(clonedRepo, ".git").isDirectory(), is(true));
+            assertThat(m.isFile(), is(true));
+            
+            try (BufferedReader in = new BufferedReader(new FileReader(m))) {
+                assertThat(in.readLine(), is("Received: (sender4@test.org) by some.server.org"));
+            }
+            
+            repo.checkout("8761998b60bf12146be97ce4854ceddc7fd0bfc9", new File("m"));
+            
+            try (BufferedReader in = new BufferedReader(new FileReader(m))) {
+                assertThat(in.readLine(), is("Received: (sender2@test.org) by some.server.org"));
+            }
+            
+        } finally {
+            if (clonedRepo.exists()) {
+                Util.deleteFolder(clonedRepo);
+            }
+        }
+    }
+    
+    /**
+     * Tests the {@link GitRepository#checkout(String, File)} method with a not existing file.
+     * 
+     * @throws GitException wanted.
+     * @throws IOException unwanted.
+     */
+    @Test(expected = GitException.class)
+    public void testCheckoutNonExistingFile() throws GitException, IOException {
+        // clone the testRepo, so that we don't modify the original
+        File clonedRepo = new File(TESTDATA, "clonedRepo");
+        assertThat(clonedRepo.exists(), is(false));
+        
+        try {
+            File m = new File(clonedRepo, "m");
+            
+            GitRepository repo = GitRepository.clone("file://" + TEST_REPO.getAbsolutePath(), clonedRepo);
+            assertThat(repo.getWorkingDirectory(), is(clonedRepo));
+            assertThat(clonedRepo.isDirectory(), is(true));
+            assertThat(new File(clonedRepo, ".git").isDirectory(), is(true));
+            assertThat(m.isFile(), is(true));
+            
+            repo.checkout("8761998b60bf12146be97ce4854ceddc7fd0bfc9", new File("doesnt_exist"));
+            
+        } finally {
+            if (clonedRepo.exists()) {
+                Util.deleteFolder(clonedRepo);
+            }
+        }
+    }
+    
+    /**
      * Tests that the {@link GitRepository#getRemotes()} returns an empty set for a repository with no remotes.
      * 
      * @throws GitException unwanted.

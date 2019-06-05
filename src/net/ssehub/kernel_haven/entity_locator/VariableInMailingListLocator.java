@@ -211,14 +211,17 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
             return;
         }
         
+        File m = new File("m");
+        
         ProgressLogger progress = new ProgressLogger("Parsing mail", commits.size());
         for (String commit : commits) {
             try {
-                gitRepo.checkout(commit);
+                // check out only the relevant file; this is slightly faster than a full checkout
+                gitRepo.checkout(commit, m);
             } catch (GitException e) {
                 LOGGER.logException("Couldn't check out commit: " + commit, e);
             }
-
+            
             try (BufferedReader in = new BufferedReader(new FileReader(new File(gitRepo.getWorkingDirectory(), "m")))) {
                 
                 searchInMail(in);
@@ -231,6 +234,13 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         }
         
         progress.close();
+
+        // reset HEAD to master to leave the repository "clean"
+        try {
+            gitRepo.checkout("master");
+        } catch (GitException e) {
+            LOGGER.logExceptionWarning("Couldn't reset HEAD to master (after finishing crawling)", e);
+        }
     }
     
     @Override
