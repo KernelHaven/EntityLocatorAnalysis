@@ -213,7 +213,7 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         
         File m = new File("m");
         
-        ProgressLogger progress = new ProgressLogger("Parsing mail", commits.size());
+        ProgressLogger progress = new ProgressLogger("VariableInMailingListLocator (parsing mails)", commits.size());
         for (String commit : commits) {
             try {
                 // check out only the relevant file; this is slightly faster than a full checkout
@@ -245,7 +245,8 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
     
     @Override
     protected void execute() {
-        ProgressLogger progress = new ProgressLogger("Crawling mail sources", this.mailSources.size());
+        ProgressLogger progress = new ProgressLogger("VariableInMailingListLocator (crawling mail sources)",
+                this.mailSources.size());
         
         for (String mailSource : this.mailSources) {
             File dir = new File(mailSource);
