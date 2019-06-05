@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -189,7 +190,7 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         }
         
         if (!foundVars.isEmpty()) {
-            String mailId = urlPrefix + messageId.replace("/", "%2F");
+            String mailId = urlPrefix + URLEncoder.encode(messageId, "UTF-8");
             for (Map.Entry<String, Integer> entry : foundVars.entrySet()) {
                 addResult(new VariableMailLocation(entry.getKey(), mailId, entry.getValue()));
             }

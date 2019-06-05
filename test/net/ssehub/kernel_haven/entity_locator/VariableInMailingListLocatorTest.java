@@ -100,19 +100,19 @@ public class VariableInMailingListLocatorTest {
         assertThat(result.size(), is(4));
         
         assertThat(result.get(0).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(0).getMailIdentifier(), is("https://lore.kernel.org/lkml/1215-4-7-1-5-4-7@test.org"));
+        assertThat(result.get(0).getMailIdentifier(), is("https://lore.kernel.org/lkml/1215-4-7-1-5-4-7%40test.org"));
         assertThat(result.get(0).getNumOccurrences(), is(1));
         
         assertThat(result.get(1).getVariable(), is("CONFIG_DEF"));
-        assertThat(result.get(1).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777@test.org"));
+        assertThat(result.get(1).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777%40test.org"));
         assertThat(result.get(1).getNumOccurrences(), is(1));
         
         assertThat(result.get(2).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(2).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777@test.org"));
+        assertThat(result.get(2).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777%40test.org"));
         assertThat(result.get(2).getNumOccurrences(), is(2));
         
         assertThat(result.get(3).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(3).getMailIdentifier(), is("https://lore.kernel.org/lkml/123%2F456@test.org"));
+        assertThat(result.get(3).getMailIdentifier(), is("https://lore.kernel.org/lkml/123%2F456%40test.org"));
         assertThat(result.get(3).getNumOccurrences(), is(1));
     }
     
@@ -143,19 +143,19 @@ public class VariableInMailingListLocatorTest {
         assertThat(result.size(), is(4));
         
         assertThat(result.get(0).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(0).getMailIdentifier(), is("https://lore.kernel.org/lkml/1215-4-7-1-5-4-7@test.org"));
+        assertThat(result.get(0).getMailIdentifier(), is("https://lore.kernel.org/lkml/1215-4-7-1-5-4-7%40test.org"));
         assertThat(result.get(0).getNumOccurrences(), is(1));
         
         assertThat(result.get(1).getVariable(), is("CONFIG_DEF"));
-        assertThat(result.get(1).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777@test.org"));
+        assertThat(result.get(1).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777%40test.org"));
         assertThat(result.get(1).getNumOccurrences(), is(1));
         
         assertThat(result.get(2).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(2).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777@test.org"));
+        assertThat(result.get(2).getMailIdentifier(), is("https://lore.kernel.org/lkml/121554-8-6-4-4-777%40test.org"));
         assertThat(result.get(2).getNumOccurrences(), is(2));
         
         assertThat(result.get(3).getVariable(), is("CONFIG_ABC"));
-        assertThat(result.get(3).getMailIdentifier(), is("https://lore.kernel.org/lkml/123%2F456@test.org"));
+        assertThat(result.get(3).getMailIdentifier(), is("https://lore.kernel.org/lkml/123%2F456%40test.org"));
         assertThat(result.get(3).getNumOccurrences(), is(1));
     }
     
