@@ -132,7 +132,9 @@ public class GitRepository {
         Set<String> result = new HashSet<>();
         
         for (String line : output.split("\\n")) {
-            result.add(line);
+            if (!line.trim().isEmpty()) {
+                result.add(line);
+            }
         }
         
         return result;
@@ -221,8 +223,8 @@ public class GitRepository {
     }
     
     /**
-     * Creates a list of all commit hashes in this repository. The result order is based on the author date,
-     * sorted old to new.
+     * Creates a list of all commit hashes in the current branch (to be more precise: all commits reachable by the
+     * current HEAD). The result order is based on the author date, sorted old to new.
      * 
      * @return The list of all commit hashes.
      * 
@@ -282,7 +284,9 @@ public class GitRepository {
         Set<String> branches = new HashSet<>();
         
         for (String line : output.split("\\n")) {
-            branches.add(line.trim());
+            if (!line.trim().isEmpty()) {
+                branches.add(line.trim());
+            }
         }
         
         return branches.contains(remote + "/" + branch);
@@ -355,7 +359,7 @@ public class GitRepository {
         }
         
         try {
-            success = Util.executeProcess(builder, "Git", stdout, stderr, 0);
+            success = Util.executeProcess(builder, "git", stdout, stderr, 0);
             
         } catch (IOException e) {
             throw new GitException(e);
@@ -382,11 +386,12 @@ public class GitRepository {
      * @param limit The maximum number of lines.
      */
     private static void logWithLimit(String header, String message, int limit) {
-        if (message.chars().filter((ch) -> ch == '\n').count() > limit) {
-            LOGGER.logDebug(header, "<too long>");
-        } else {
-            LOGGER.logDebug(header, message);
-            
+        if (DEBUG_LOGGING) {
+            if (message.chars().filter((ch) -> ch == '\n').count() > limit) {
+                LOGGER.logDebug(header, "<too long>");
+            } else {
+                LOGGER.logDebug(header, message);
+            }
         }
     }
     
