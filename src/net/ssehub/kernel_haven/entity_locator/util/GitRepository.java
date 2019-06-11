@@ -354,7 +354,8 @@ public class GitRepository {
      * 
      * @throws GitException If the given command fails executing or returns non-success.
      */
-    private @NonNull String runGitCommand(@NonNull String @NonNull ... command) throws GitException {
+    private @NonNull String runGitCommand(@NonNull String /*@NonNull*/ ... command) throws GitException {
+        // TODO: commented out @NonNull annotation because checkstyle can't parse it
         return runGitCommand(workingDirectory, command);
     }
     
@@ -368,8 +369,9 @@ public class GitRepository {
      * 
      * @throws GitException If the given command fails executing or returns non-success.
      */
-    private static @NonNull String runGitCommand(@NonNull File workingDirectory, @NonNull String@NonNull ... command)
-            throws GitException {
+    private static @NonNull String runGitCommand(@NonNull File workingDirectory, 
+            @NonNull String /*@NonNull*/ ... command) throws GitException {
+        // TODO: commented out @NonNull annotation because checkstyle can't parse it
         
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(workingDirectory);
