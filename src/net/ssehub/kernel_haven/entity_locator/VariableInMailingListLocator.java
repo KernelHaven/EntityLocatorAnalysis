@@ -203,7 +203,7 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
      * @param gitRepo The git repository containing the already checked-out mail archive.
      */
     private void execute(@NonNull GitRepository gitRepo) {
-        List<String> commits;
+        List<@NonNull String> commits;
         try {
             gitRepo.checkout("master");
             commits = gitRepo.listAllCommits();

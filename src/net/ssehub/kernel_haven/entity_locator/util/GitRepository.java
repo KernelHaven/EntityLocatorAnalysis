@@ -15,6 +15,8 @@
  */
 package net.ssehub.kernel_haven.entity_locator.util;
 
+import static net.ssehub.kernel_haven.util.null_checks.NullHelpers.notNull;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -36,9 +38,9 @@ public class GitRepository {
 
     private static final boolean DEBUG_LOGGING = false;
     
-    private static final Logger LOGGER = Logger.get();
+    private static final @NonNull Logger LOGGER = Logger.get();
     
-    private File workingDirectory;
+    private @NonNull File workingDirectory;
     
     /**
      * Creates a {@link GitRepository} for the given folder.
@@ -47,7 +49,7 @@ public class GitRepository {
      * 
      * @throws GitException If workingDirectory is not a git repository and it cannot be initialized as one.
      */
-    public GitRepository(File workingDirectory) throws GitException {
+    public GitRepository(@NonNull File workingDirectory) throws GitException {
         this.workingDirectory = workingDirectory;
         if (!workingDirectory.isDirectory()) {
             workingDirectory.mkdir();
@@ -72,7 +74,9 @@ public class GitRepository {
      * 
      * @throws GitException If cloning fails.
      */
-    public static @NonNull GitRepository clone(String remoteUrl, File destination) throws GitException {
+    public static @NonNull GitRepository clone(@NonNull String remoteUrl,
+            @NonNull File destination) throws GitException {
+        
         if (destination.exists()) {
             throw new GitException(destination + " already exists");
         }
@@ -83,7 +87,7 @@ public class GitRepository {
         }
         
         try {
-            runGitCommand(destination, "git", "clone", remoteUrl, destination.getAbsolutePath());
+            runGitCommand(destination, "git", "clone", remoteUrl, notNull(destination.getAbsolutePath()));
             
             return new GitRepository(destination);
         } catch (GitException e) {
@@ -115,7 +119,7 @@ public class GitRepository {
      * 
      * @throws GitException If adding the remote fails.
      */
-    public void addRemote(String name, String url) throws GitException {
+    public void addRemote(@NonNull String name, @NonNull String url) throws GitException {
         runGitCommand("git", "remote", "add", name, url);
     }
     
@@ -126,10 +130,10 @@ public class GitRepository {
      * 
      * @throws GitException 
      */
-    public Set<String> getRemotes() throws GitException {
+    public @NonNull Set<@NonNull String> getRemotes() throws GitException {
         String output = runGitCommand("git", "remote");
         
-        Set<String> result = new HashSet<>();
+        Set<@NonNull String> result = new HashSet<>();
         
         for (String line : output.split("\\n")) {
             if (!line.trim().isEmpty()) {
@@ -147,23 +151,23 @@ public class GitRepository {
      * 
      * @return A remote name.
      */
-    public static String createRemoteName(String url) {
+    public static @NonNull String createRemoteName(@NonNull String url) {
         // drop leading protocol
         int colonIndex = url.indexOf(':');
         if (colonIndex != -1) {
-            url = url.substring(colonIndex + 1);
+            url = notNull(url.substring(colonIndex + 1));
             while (url.startsWith("/")) {
-                url = url.substring(1);
+                url = notNull(url.substring(1));
             }
         }
         
         // drop trailing .git
         if (url.endsWith(".git")) {
-            url = url.substring(0, url.length() - ".git".length());
+            url = notNull(url.substring(0, url.length() - ".git".length()));
         }
         
         // replace everything that isn't alphanumeric
-        return url.replaceAll("[^A-Za-z0-9_\\-]", "_");
+        return notNull(url.replaceAll("[^A-Za-z0-9_\\-]", "_"));
     }
     
     /**
@@ -173,7 +177,7 @@ public class GitRepository {
      * 
      * @throws GitException If fetching fails.
      */
-    public void fetch(String remoteName) throws GitException {
+    public void fetch(@NonNull String remoteName) throws GitException {
         runGitCommand("git", "fetch", remoteName);
     }
     
@@ -186,7 +190,7 @@ public class GitRepository {
      * 
      * @throws GitException If fetching fails.
      */
-    public void fetch(String remoteName, String commitOrBranch) throws GitException {
+    public void fetch(@NonNull String remoteName, @NonNull String commitOrBranch) throws GitException {
         try {
             runGitCommand("git", "fetch", remoteName, commitOrBranch);
         } catch (GitException e) {
@@ -206,7 +210,7 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public void checkout(String commitHash) throws GitException {
+    public void checkout(@NonNull String commitHash) throws GitException {
         runGitCommand("git", "checkout", "--force", commitHash);
     }
     
@@ -218,7 +222,7 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public void checkout(String remoteName, String branch) throws GitException {
+    public void checkout(@NonNull String remoteName, @NonNull String branch) throws GitException {
         runGitCommand("git", "checkout", "--force", remoteName + "/" + branch);
     }
     
@@ -231,8 +235,8 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public void checkout(String commitHash, File file) throws GitException {
-        runGitCommand("git", "checkout", "--force", commitHash, "--", file.getPath());
+    public void checkout(@NonNull String commitHash, @NonNull File file) throws GitException {
+        runGitCommand("git", "checkout", "--force", commitHash, "--", notNull(file.getPath()));
     }
     
     /**
@@ -243,9 +247,11 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public List<String> listAllCommits() throws GitException {
+    public @NonNull List<@NonNull String> listAllCommits() throws GitException {
         String out = runGitCommand("git", "log", "--format=format:%H", "--author-date-order", "--reverse");
-        return Arrays.asList(out.split("\n"));
+        @SuppressWarnings("null")
+        List<@NonNull String> result = notNull(Arrays.asList(out.split("\n")));
+        return result;
     }
     
     /**
@@ -259,7 +265,9 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public String getCommitBefore(String remoteName, String branch, String date) throws GitException {
+    public @NonNull String getCommitBefore(@NonNull String remoteName, @NonNull String branch, @NonNull String date)
+            throws GitException {
+        
         String hash = runGitCommand("git", "rev-list", "-n", "1", "--before=" + date, remoteName + "/" + branch);
         
         return hash;
@@ -275,7 +283,9 @@ public class GitRepository {
      * 
      * @throws GitException If this command fails.
      */
-    public String getLastCommitOfBranch(String remoteName, String branch) throws GitException {
+    public @NonNull String getLastCommitOfBranch(@NonNull String remoteName, @NonNull String branch)
+            throws GitException {
+        
         String hash = runGitCommand("git", "rev-list", "-n", "1", remoteName + "/" + branch);
         
         return hash;
@@ -291,7 +301,7 @@ public class GitRepository {
      * 
      * @throws GitException 
      */
-    public boolean containsRemoteBranch(String remote, String branch) throws GitException {
+    public boolean containsRemoteBranch(@NonNull String remote, @NonNull String branch) throws GitException {
         String output = runGitCommand("git", "branch", "-r");
         
         Set<String> branches = new HashSet<>();
@@ -312,7 +322,7 @@ public class GitRepository {
      * 
      * @return Whether the repository contains the given commit. Also <code>false</code> if something else goes wrong.
      */
-    public boolean containsCommit(String commit) {
+    public boolean containsCommit(@NonNull String commit) {
         boolean exists;
         
         try {
@@ -331,7 +341,7 @@ public class GitRepository {
      * 
      * @return The working directory. This is an existing folder.
      */
-    public File getWorkingDirectory() {
+    public @NonNull File getWorkingDirectory() {
         return workingDirectory;
     }
     
@@ -344,7 +354,7 @@ public class GitRepository {
      * 
      * @throws GitException If the given command fails executing or returns non-success.
      */
-    private String runGitCommand(String... command) throws GitException {
+    private @NonNull String runGitCommand(@NonNull String @NonNull ... command) throws GitException {
         return runGitCommand(workingDirectory, command);
     }
     
@@ -358,7 +368,9 @@ public class GitRepository {
      * 
      * @throws GitException If the given command fails executing or returns non-success.
      */
-    private static String runGitCommand(File workingDirectory, String... command) throws GitException {
+    private static @NonNull String runGitCommand(@NonNull File workingDirectory, @NonNull String@NonNull ... command)
+            throws GitException {
+        
         ProcessBuilder builder = new ProcessBuilder(command);
         builder.directory(workingDirectory);
         
@@ -379,16 +391,16 @@ public class GitRepository {
             
         } finally {
             if (DEBUG_LOGGING) {
-                logWithLimit("Stdout:", stdout.toString().trim(), 20);
-                logWithLimit("Stderr:", stderr.toString().trim(), 1000);
+                logWithLimit("Stdout:", notNull(stdout.toString().trim()), 20);
+                logWithLimit("Stderr:", notNull(stderr.toString().trim()), 1000);
             }
         }
         
         if (!success) {
-            throw new GitException(stderr.toString().trim());
+            throw new GitException(notNull(stderr.toString().trim()));
         }
         
-        return stdout.toString().trim();
+        return notNull(stdout.toString().trim());
     }
     
     /**
@@ -398,7 +410,7 @@ public class GitRepository {
      * @param message The message to log.
      * @param limit The maximum number of lines.
      */
-    private static void logWithLimit(String header, String message, int limit) {
+    private static void logWithLimit(@NonNull String header, @NonNull String message, int limit) {
         if (DEBUG_LOGGING) {
             if (message.chars().filter((ch) -> ch == '\n').count() > limit) {
                 LOGGER.logDebug(header, "<too long>");

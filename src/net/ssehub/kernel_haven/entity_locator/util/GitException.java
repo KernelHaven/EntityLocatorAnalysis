@@ -15,6 +15,8 @@
  */
 package net.ssehub.kernel_haven.entity_locator.util;
 
+import net.ssehub.kernel_haven.util.null_checks.NonNull;
+
 /**
  * An exception thrown by {@link GitRepository}.
  * 
@@ -35,7 +37,7 @@ public class GitException extends Exception {
      * 
      * @param message The exception message.
      */
-    public GitException(String message) {
+    public GitException(@NonNull String message) {
         super(message);
     }
 
@@ -44,7 +46,7 @@ public class GitException extends Exception {
      * 
      * @param cause The exception cause.
      */
-    public GitException(Throwable cause) {
+    public GitException(@NonNull Throwable cause) {
         super(cause);
     }
     
@@ -54,7 +56,7 @@ public class GitException extends Exception {
      * @param message The exception message.
      * @param cause The exception cause.
      */
-    public GitException(String message, Throwable cause) {
+    public GitException(@NonNull String message, @NonNull Throwable cause) {
         super(message, cause);
     }
 
