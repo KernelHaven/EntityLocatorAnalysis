@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import net.ssehub.kernel_haven.SetUpException;
 import net.ssehub.kernel_haven.analysis.AnalysisComponent;
 import net.ssehub.kernel_haven.config.Configuration;
+import net.ssehub.kernel_haven.config.ListSetting;
 import net.ssehub.kernel_haven.config.Setting;
 import net.ssehub.kernel_haven.config.Setting.Type;
 import net.ssehub.kernel_haven.entity_locator.VariableInMailingListLocator.VariableMailLocation;
@@ -105,8 +106,8 @@ public class VariableInMailingListLocator extends AnalysisComponent<VariableMail
         
     }
     
-    public static final @NonNull Setting<@NonNull List<@NonNull String>> MAIL_SOURCES = new Setting<>(
-        "analysis.mail_locator.mail_sources", Type.STRING_LIST, true, null, "List of Git repositories that contain "
+    public static final @NonNull ListSetting<@NonNull String> MAIL_SOURCES = new ListSetting<>(
+        "analysis.mail_locator.mail_sources", Type.STRING, true, "List of Git repositories that contain "
                 + "the mails to be searched. These may be remote URLs or local directories. In the first case, the "
                 + "remote will be cloned into a temporary directory. In the second case, the master branch of the "
                 + "existing checkout will be used directly.");
